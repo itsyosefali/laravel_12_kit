@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Facades\Log as LOG;
+use Inertia\Inertia;
+
 class UserController extends Controller
 {
     /**
@@ -23,7 +25,10 @@ class UserController extends Controller
             ];
         });
 
-        return response()->json($users);
+        // return response()->json($users);
+        return Inertia::render('Users/index', [
+            'users' => $users,
+        ]);
     }
 
     /**
@@ -39,9 +44,7 @@ class UserController extends Controller
      */
     public function store(Request $request)
     {   
-        LOG::info('User creation request', [
-            'request' => $request->all()
-        ]);
+
         $validated = $request->validate([
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',

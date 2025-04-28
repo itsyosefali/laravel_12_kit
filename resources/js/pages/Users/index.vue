@@ -59,7 +59,7 @@ function formatDate(dateString: string) {
   return dayjs(dateString).format('YYYY-MM-DD HH:mm')
 }
 
-const users = ref<User[]>([])
+// const users = ref<User[]>([])
 const loading = ref(false)
 const error = ref<Error | null>(null)
 const deletingUserId = ref<string | null>(null)
@@ -75,7 +75,18 @@ const isSubmitting = ref(false)
 const availableroles = ref<Role[]>([])
 const selectedroles = ref<number[]>([])
 
+const props = defineProps<{
+  users: User[]
+}>()
+
+onMounted(() => { 
+  users.value = props.users
+  
+});
+
+const users = ref<User[]>(props.users)
 function fetchUsers() {
+
   loading.value = true
   error.value = null
   axios.get('/api/users')
@@ -91,7 +102,9 @@ function fetchUsers() {
     })
 }
 
-onMounted(fetchUsers)
+// onMounted(fetchUsers)
+
+// TODO:: API FROM SERVER-SIDE ONLY
 
 const filteredUsers = computed(() => {
   let result = [...users.value]
