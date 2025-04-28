@@ -44,7 +44,7 @@ interface User {
   id: string
   name: string
   email: string
-  role: 'Admin' | 'Editor' | 'User'
+  roles: string[]  
   created_at: string
   updated_at: string
 }
@@ -133,22 +133,60 @@ function nextPage() {
   if (page.value * limit.value < totalCount) page.value++
 }
 
+function openEditDialog(user: User) {
+  currentUser.value = { ...user }
+  selectedroles.value = []
+  fetchRoles().then(() => {
+    // Use optional chaining or check that roles is an array before calling includes
+    if (currentUser.value && Array.isArray(currentUser.value.roles)) {
+      const selected = availableroles.value.filter(r =>
+        currentUser.value.roles.includes(r.name)
+      )
+      selectedroles.value = selected.map(r => r.id)
+    } else {
+      selectedroles.value = []
+    }
+    editDialogOpen.value = true
+  })
+}
+
 async function updateUser() {
   if (!currentUser.value) return
   isSubmitting.value = true
   try {
+    // Convert the selected role IDs into role names
+    const selectedRoleNames = availableroles.value
+      .filter(r => selectedroles.value.includes(r.id))
+      .map(r => r.name)
+    
     const payload = {
       name: currentUser.value.name,
       email: currentUser.value.email,
-      roles: selectedroles.value, // updated to send multiple role IDs
+      roles: selectedRoleNames, // Send array of role names
     }
     await axios.put(`/api/users/${currentUser.value.id}`, payload)
+    // Update local state
+    const updatedUser = {
+      ...currentUser.value,
+      roles: selectedRoleNames
+    }
+    users.value = users.value.map(u => 
+      u.id === updatedUser.id ? updatedUser : u
+    )
     toast.success('User updated successfully')
-    const { data } = await axios.get('/api/users')
-    users.value = Array.isArray(data) ? data : data?.users ?? []
     editDialogOpen.value = false
   } catch (err) {
-    toast.error('Failed to update user')
+    if (axios.isAxiosError(err)) {
+      const errorMessage = err.response?.data?.message || 'Failed to update user'
+      const errors = err.response?.data?.errors
+      if (errors) {
+        toast.error(
+          Object.values(errors).flat().join('\n')
+        )
+      } else {
+        toast.error(errorMessage)
+      }
+    }
   } finally {
     isSubmitting.value = false
   }
@@ -167,22 +205,6 @@ async function deleteUser() {
   } finally {
     isSubmitting.value = false
   }
-}
-
-
-function openEditDialog(user: User) {
-  currentUser.value = { ...user }
-  selectedroles.value = []
-  fetchRoles().then(() => {
-    // Initialize selectedroles based on currentUser.role
-    if (currentUser.value) {
-      const selected = availableroles.value.filter(r => r.name === currentUser.value!.role)
-      selectedroles.value = selected.map(r => r.id)
-    } else {
-      selectedroles.value = []
-    }
-    editDialogOpen.value = true
-  })
 }
 
 function openDeleteDialog(user: User) {

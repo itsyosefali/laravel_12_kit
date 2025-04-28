@@ -89,14 +89,33 @@ class UserController extends Controller
     {
         $user = User::findOrFail($id);
 
-        $user->update([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => $request->filled('password') ? bcrypt($request->password) : $user->password,
+        $validated = $request->validate([
+            'first_name' => 'sometimes|required|string|max:255',
+            'last_name' => 'sometimes|required|string|max:255',
+            'email' => 'sometimes|required|string|email|max:255|unique:users,email,' . $user->id,
+            'password' => 'sometimes|nullable|string|min:6',
+            'roles' => 'sometimes|required|array',
+            'roles.*' => 'exists:roles,id'
         ]);
 
-        if ($request->has('roles')) {
-            $user->roles()->sync($request->roles);
+        if (isset($validated['first_name']) || isset($validated['last_name'])) {
+            $user->first_name = $validated['first_name'] ?? $user->first_name;
+            $user->last_name = $validated['last_name'] ?? $user->last_name;
+            $user->name = ($validated['first_name'] ?? $user->first_name) . ' ' . ($validated['last_name'] ?? $user->last_name);
+        }
+
+        if (isset($validated['email'])) {
+            $user->email = $validated['email'];
+        }
+
+        if (!empty($validated['password'])) {
+            $user->password = bcrypt($validated['password']);
+        }
+
+        $user->save();
+
+        if (isset($validated['roles'])) {
+            $user->roles()->sync($validated['roles']);
         }
 
         return response()->json([
