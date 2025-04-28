@@ -58,14 +58,18 @@ class RolesController extends Controller
 
         $role->update(['name' => $request->name]);
         $role->syncPermissions($request->permissions);
-        return redirect()->route('roles.index')->with('success','Role updated');
+        return response()->json([
+            'message' => 'Role updated',
+            'role' => $role->load('permissions')
+        ], 200);
     }
 
     public function destroy($id)
     {
         $role = Role::findOrFail($id);
         $role->delete();
-        return redirect()->route('roles.index')->with('success','Role deleted');
+        return response()->json(['message' => 'Role deleted successfully'], 200);
+
     }
     public function permissions()
     {

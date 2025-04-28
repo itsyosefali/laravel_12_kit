@@ -53,8 +53,6 @@ onMounted(async () => {
   try {
     loading.value = true
     const { data } = await axios.get('/api/users')
-    console.log(data);
-    
     users.value = Array.isArray(data) ? data : data?.users ?? []
   } catch (err) {
     error.value = err as Error

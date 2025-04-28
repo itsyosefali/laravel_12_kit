@@ -11,11 +11,23 @@ import {
   TrashIcon,
   ShieldIcon,
 } from 'lucide-vue-next'
+import {
+Dialog,
+DialogContent,
+DialogDescription,
+DialogFooter,
+DialogHeader,
+DialogTitle,
+DialogTrigger,
+} from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import AppLayout from '@/layouts/AppLayout.vue'
 import { router } from '@inertiajs/vue3'
-
+import { Toaster } from 'vue-sonner'
+import { Label } from '@/components/ui/label'
+import { Input } from '@/components/ui/input'
+import { Checkbox } from '@/components/ui/checkbox'
 interface Permission {
   id: number
   name: string
@@ -41,6 +53,12 @@ const sortOrder = ref<'asc' | 'desc'>('asc')
 const searchQuery = ref('')
 const page = ref(1)
 const limit = ref(10)
+const editDialogOpen = ref(false)
+const deleteDialogOpen = ref(false)
+const currentRole = ref<Role | null>(null)
+const availablePermissions = ref<Permission[]>([])
+const selectedPermissions = ref<number[]>([])
+const isSubmitting = ref(false)
 const breadcrumbs = [
   { title: 'Roles Management', href: '/roles' }
 ]
@@ -100,8 +118,18 @@ function sortBy(field: string) {
 function openAddDialog() {
     router.visit('/roles/create')
 }
-function openEditDialog(_role: Role) {}
-function confirmDelete(_role: Role) {}
+function openEditDialog(role: Role) {
+  currentRole.value = { ...role }
+  // This should pre-populate selectedPermissions from role.permissions
+  selectedPermissions.value = role.permissions.map(p => Number(p.id))
+  fetchPermissions().then(() => {
+    editDialogOpen.value = true
+  })
+}
+function confirmDelete(role: Role) {
+  currentRole.value = role
+  deleteDialogOpen.value = true
+}
 function handleSearch() {
   page.value = 1
 }
@@ -112,12 +140,148 @@ function nextPage() {
   const totalCount = roles.value.length
   if (page.value * limit.value < totalCount) page.value++
 }
+async function fetchRoles() {
+    try {
+        loading.value = true
+        const { data } = await axios.get('/api/roles')
+        roles.value = Array.isArray(data) ? data : data?.roles ?? []
+    } catch (err) {
+        error.value = err as Error
+        toast.error('Failed to load roles')
+    } finally {
+        loading.value = false
+    }
+}
 
+async function updateRole() {
+  if (!currentRole.value) return
+  isSubmitting.value = true
+  try {
+    const payload = {
+      name: currentRole.value.name,
+      permissions: selectedPermissions.value, 
+    }
+    await axios.put(`/api/roles/${currentRole.value.id}`, payload)
+    toast.success('Role updated successfully')
+    await fetchRoles()
+    editDialogOpen.value = false
+  } catch (err) {
+    toast.error('Failed to update role')
+  } finally {
+    isSubmitting.value = false
+  }
+}
+async function deleteRole() {
+    if (!currentRole.value) return
+    isSubmitting.value = true
+    try {
+        await axios.delete(`/api/roles/${currentRole.value.id}`)
+        toast.success('Role deleted successfully')
+        await fetchRoles()
+        deleteDialogOpen.value = false
+    } catch (err) {
+        toast.error('Failed to delete role')
+    } finally {
+        isSubmitting.value = false
+    }
+}
+
+async function fetchPermissions() {
+    try {
+        const { data } = await axios.get('/api/roles/permissions')
+        availablePermissions.value = Array.isArray(data)
+            ? data
+            : data?.permissions ?? []
+    } catch (err) {
+        toast.error('Failed to load permissions')
+    }
+}
+
+function togglePermission(id: number) {
+    if (selectedPermissions.value.includes(id)) {
+      selectedPermissions.value = selectedPermissions.value.filter(x => x !== id)
+    } else {
+      selectedPermissions.value.push(id)
+    }
+  }
 </script>
 
 <template>
-  <Head title="Dashboard" />
   <AppLayout :breadcrumbs="breadcrumbs">
+    <Toaster position="top-center" />
+<Dialog v-model:open="editDialogOpen">
+  <DialogContent>
+    <DialogHeader>
+      <DialogTitle>Edit Role</DialogTitle>
+      <DialogDescription>
+        Modify role details below. Click save when you're done.
+      </DialogDescription>
+    </DialogHeader>
+    
+    <div class="space-y-4" v-if="currentRole">
+      <div class="space-y-2">
+        <Label>Role Name</Label>
+        <Input v-model="currentRole.name" />
+      </div>
+      
+      <div class="space-y-2">
+        <Label>Permissions</Label>
+        <div class="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto p-2 border rounded">
+    <div
+      v-for="perm in availablePermissions"
+      :key="perm.id"
+      class="flex items-center gap-2"
+    >
+      <Checkbox 
+        :id="`perm-${perm.id}`"
+        :value="perm.id"
+        :checked="selectedPermissions.includes(perm.id)"
+        @change="() => togglePermission(perm.id)"
+      />
+      <Label :for="`perm-${perm.id}`" class="text-sm font-normal">
+        {{ perm.name }}
+      </Label>
+    </div>
+  </div>
+      </div>
+    </div>
+
+    <DialogFooter>
+      <Button variant="outline" @click="editDialogOpen = false">Cancel</Button>
+      <Button @click="updateRole" :disabled="isSubmitting">
+        <LoaderCircle v-if="isSubmitting" class="h-4 w-4 mr-2 animate-spin" />
+        Save Changes
+      </Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
+
+<Dialog v-model:open="deleteDialogOpen">
+  <DialogContent>
+    <DialogHeader>
+      <DialogTitle>Confirm Delete</DialogTitle>
+      <DialogDescription>
+        Are you sure you want to delete this role? This action cannot be undone.
+      </DialogDescription>
+    </DialogHeader>
+    
+    <div class="flex flex-col gap-4" v-if="currentRole">
+      <div class="bg-destructive/10 p-4 rounded">
+        <p class="text-destructive font-medium">
+          Deleting role: {{ currentRole.name }}
+        </p>
+      </div>
+    </div>
+
+    <DialogFooter>
+      <Button variant="outline" @click="deleteDialogOpen = false">Cancel</Button>
+      <Button variant="destructive" @click="deleteRole" :disabled="isSubmitting">
+        <LoaderCircle v-if="isSubmitting" class="h-4 w-4 mr-2 animate-spin" />
+        Confirm Delete
+      </Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
     <div class="space-y-4">
       <div class="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
         <input
