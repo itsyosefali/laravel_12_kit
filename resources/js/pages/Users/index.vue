@@ -75,18 +75,23 @@ const isSubmitting = ref(false)
 const availableroles = ref<Role[]>([])
 const selectedroles = ref<number[]>([])
 
-onMounted(async () => {
-  try {
-    loading.value = true
-    const { data } = await axios.get('/api/users')
-    users.value = Array.isArray(data) ? data : data?.users ?? []
-  } catch (err) {
-    error.value = err as Error
-    toast.error('Failed to load users')
-  } finally {
-    loading.value = false
-  }
-})
+function fetchUsers() {
+  loading.value = true
+  error.value = null
+  axios.get('/api/users')
+    .then(({ data }) => {
+      users.value = Array.isArray(data) ? data : data?.users ?? []
+    })
+    .catch(err => {
+      error.value = err as Error
+      toast.error('Failed to load users')
+    })
+    .finally(() => {
+      loading.value = false
+    })
+}
+
+onMounted(fetchUsers)
 
 const filteredUsers = computed(() => {
   let result = [...users.value]
@@ -137,7 +142,6 @@ function openEditDialog(user: User) {
   currentUser.value = { ...user }
   selectedroles.value = []
   fetchRoles().then(() => {
-    // Use optional chaining or check that roles is an array before calling includes
     if (currentUser.value && Array.isArray(currentUser.value.roles)) {
       const selected = availableroles.value.filter(r =>
         currentUser.value.roles.includes(r.name)
@@ -154,27 +158,28 @@ async function updateUser() {
   if (!currentUser.value) return
   isSubmitting.value = true
   try {
-    // Convert the selected role IDs into role names
     const selectedRoleNames = availableroles.value
       .filter(r => selectedroles.value.includes(r.id))
       .map(r => r.name)
-    
+
     const payload = {
       name: currentUser.value.name,
       email: currentUser.value.email,
-      roles: selectedRoleNames, // Send array of role names
+      roles: selectedroles.value, 
     }
     await axios.put(`/api/users/${currentUser.value.id}`, payload)
-    // Update local state
     const updatedUser = {
       ...currentUser.value,
-      roles: selectedRoleNames
+      roles: availableroles.value
+        .filter(r => selectedroles.value.includes(r.id))
+        .map(r => r.name)
     }
-    users.value = users.value.map(u => 
+    users.value = users.value.map(u =>
       u.id === updatedUser.id ? updatedUser : u
     )
     toast.success('User updated successfully')
     editDialogOpen.value = false
+    fetchUsers()
   } catch (err) {
     if (axios.isAxiosError(err)) {
       const errorMessage = err.response?.data?.message || 'Failed to update user'
@@ -271,7 +276,7 @@ const breadcrumbs: BreadcrumbItem[] = [
               :id="`perm-${role.id}`"
               :value="role.id"
               :checked="selectedroles.includes(role.id)"
-              @change="() => toggleRole(role.id)"
+              @click="() => toggleRole(role.id)"
             />
               <div class="ml-2">
                 <Badge :variant="roleVariant(role.name)" class="text-sm">
@@ -291,7 +296,6 @@ const breadcrumbs: BreadcrumbItem[] = [
       </DialogContent>
     </Dialog>
 
-    <!-- Delete User Dialog -->
     <Dialog v-model:open="deleteDialogOpen">
       <DialogContent>
         <DialogHeader>
