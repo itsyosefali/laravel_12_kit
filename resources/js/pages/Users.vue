@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import dayjs from 'dayjs'
-import { debounce } from 'lodash-es'
+// import { debounce } from 'lodash-es'
 import axios from 'axios'
 import { toast } from 'vue-sonner'
 import {
@@ -53,6 +53,8 @@ onMounted(async () => {
   try {
     loading.value = true
     const { data } = await axios.get('/api/users')
+    console.log(data);
+    
     users.value = Array.isArray(data) ? data : data?.users ?? []
   } catch (err) {
     error.value = err as Error
@@ -124,7 +126,7 @@ function roleVariant(role: string) {
   }
 }
 function openAddDialog() {}
-function openEditDialog(_user: User) {}
+// function openEditDialog(_user: User) {}
 
 const breadcrumbs: BreadcrumbItem[] = [
   { title: 'Users Management', href: '/users' }

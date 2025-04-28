@@ -13,6 +13,9 @@ Route::get('dashboard', function () {
 
 Route::inertia('/users', 'Users')->name('users.index')->middleware(['auth', 'verified']);
 
+Route::inertia('roles', 'Roles/index')->name('roles.index')->middleware(['auth', 'verified']);
+
+Route::inertia('roles/create', 'Roles/create')->name('roles.create')->middleware(['auth', 'verified']);
 
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';
