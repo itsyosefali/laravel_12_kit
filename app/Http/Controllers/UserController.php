@@ -70,7 +70,22 @@ class UserController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        //
+        $user = User::findOrFail($id);
+
+        $user->update([
+            'name' => $request->name,
+            'email' => $request->email,
+            'password' => $request->filled('password') ? bcrypt($request->password) : $user->password,
+        ]);
+
+        if ($request->has('roles')) {
+            $user->roles()->sync($request->roles);
+        }
+
+        return response()->json([
+            'message' => 'User updated successfully.',
+            'user' => $user->load('roles')
+        ], 200);
     }
 
     /**
@@ -78,6 +93,11 @@ class UserController extends Controller
      */
     public function destroy(string $id)
     {
-        //
+        $user = User::findOrFail($id);
+        $user->delete();
+
+        return response()->json([
+            'message' => 'User deleted successfully.'
+        ], 200);
     }
 }

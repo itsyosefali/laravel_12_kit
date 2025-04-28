@@ -11,7 +11,7 @@ Route::get('dashboard', function () {
     return Inertia::render('Dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
 
-Route::inertia('/users', 'Users')->name('users.index')->middleware(['auth', 'verified']);
+Route::inertia('/users', 'Users/index')->name('users.index')->middleware(['auth', 'verified']);
 
 Route::inertia('roles', 'Roles/index')->name('roles.index')->middleware(['auth', 'verified']);
 

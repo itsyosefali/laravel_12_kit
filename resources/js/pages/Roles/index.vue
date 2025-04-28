@@ -205,7 +205,6 @@ function togglePermission(id: number) {
     }
   }
   // TODO: FIX THE PREMISSION CHECKING (PAYLOD ONLY SEND THE NAME AND EMPTY ARRAY)
-  
 </script>
 
 <template>
