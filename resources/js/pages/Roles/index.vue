@@ -198,11 +198,16 @@ async function fetchPermissions() {
 }
 
 function togglePermission(id: number) {
+  console.log('hi bitch by MOAD')
     if (selectedPermissions.value.includes(id)) {
       selectedPermissions.value = selectedPermissions.value.filter(x => x !== id)
+      console.log(selectedPermissions);
+      
     } else {
       selectedPermissions.value.push(id)
     }
+    console.log(selectedPermissions);
+    
   }
   // TODO: FIX THE PREMISSION CHECKING (PAYLOD ONLY SEND THE NAME AND EMPTY ARRAY)
 </script>
@@ -237,7 +242,7 @@ function togglePermission(id: number) {
         :id="`perm-${perm.id}`"
         :value="perm.id"
         :checked="selectedPermissions.includes(perm.id)"
-        @change="() => togglePermission(perm.id)"
+        @click="() => togglePermission(perm.id)"
       />
       <Label :for="`perm-${perm.id}`" class="text-sm font-normal">
         {{ perm.name }}
