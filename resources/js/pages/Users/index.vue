@@ -38,6 +38,7 @@ DialogTrigger,
 } from '@/components/ui/dialog'
 import AppLayout from '@/layouts/AppLayout.vue'
 import { BreadcrumbItem } from '@/types'
+import { router } from '@inertiajs/vue3'
 
 interface User {
   id: string
@@ -168,15 +169,18 @@ async function deleteUser() {
   }
 }
 
-function openAddDialog() {}
 
 function openEditDialog(user: User) {
   currentUser.value = { ...user }
   selectedroles.value = []
   fetchRoles().then(() => {
     // Initialize selectedroles based on currentUser.role
-    const selected = availableroles.value.filter(r => r.name === currentUser.value.role)
-    selectedroles.value = selected.map(r => r.id)
+    if (currentUser.value) {
+      const selected = availableroles.value.filter(r => r.name === currentUser.value!.role)
+      selectedroles.value = selected.map(r => r.id)
+    } else {
+      selectedroles.value = []
+    }
     editDialogOpen.value = true
   })
 }
@@ -185,7 +189,9 @@ function openDeleteDialog(user: User) {
   currentUser.value = { ...user }
   deleteDialogOpen.value = true
 }
-
+function openAddDialog() {
+  router.visit('/users/create')
+}
 function roleVariant(role: string) {
   switch (role) {
     case 'Admin': return 'default'

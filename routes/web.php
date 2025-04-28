@@ -12,7 +12,7 @@ Route::get('dashboard', function () {
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::inertia('/users', 'Users/index')->name('users.index')->middleware(['auth', 'verified']);
-
+Route::inertia('/users/create', 'Users/create')->name('users.create')->middleware(['auth', 'verified']);
 Route::inertia('roles', 'Roles/index')->name('roles.index')->middleware(['auth', 'verified']);
 
 Route::inertia('roles/create', 'Roles/create')->name('roles.create')->middleware(['auth', 'verified']);

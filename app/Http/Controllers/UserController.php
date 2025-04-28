@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\User;
-
+use Illuminate\Support\Facades\Log as LOG;
 class UserController extends Controller
 {
     /**
@@ -38,15 +38,32 @@ class UserController extends Controller
      * Store a newly created resource in storage.
      */
     public function store(Request $request)
-    {
-        
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => bcrypt($request->password),
+    {   
+        LOG::info('User creation request', [
+            'request' => $request->all()
+        ]);
+        $validated = $request->validate([
+            'first_name' => 'required|string|max:255',
+            'last_name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users',
+            'password' => 'required|string|min:6',
+            'role' => 'required|exists:roles,id'
         ]);
 
-        return redirect()->route('users.index')->with('success', 'User created successfully.');
+        $user = User::create([
+            'first_name' => $validated['first_name'],
+            'last_name' => $validated['last_name'],
+            'name' => $validated['first_name'] . ' ' . $validated['last_name'],
+            'email' => $validated['email'],
+            'password' => bcrypt($validated['password']),
+        ]);
+
+        $user->roles()->sync([$validated['role']]);
+
+        return response()->json([
+            'message' => 'User created successfully.',
+            'user' => $user->load('roles')
+        ], 201);
     }
 
     /**
