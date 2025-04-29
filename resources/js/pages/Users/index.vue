@@ -72,35 +72,48 @@ const editDialogOpen = ref(false)
 const deleteDialogOpen = ref(false)
 const currentUser = ref<User | null>(null)
 const isSubmitting = ref(false)
-const availableroles = ref<Role[]>([])
 const selectedroles = ref<number[]>([])
 
 const props = defineProps<{
-  users: User[]
+  users: Array<{
+    id: string
+    name: string
+    email: string
+    roles: string[]
+    created_at: string
+    updated_at: string
+  }>
+  roles: Array<{
+    id: number
+    name: string
+  }>
 }>()
+
+const users = ref(props.users)
+const availableroles = ref(props.roles)
+console.log(props.users);
 
 onMounted(() => { 
   users.value = props.users
   
 });
 
-const users = ref<User[]>(props.users)
-function fetchUsers() {
+// function fetchUsers() {
 
-  loading.value = true
-  error.value = null
-  axios.get('/api/users')
-    .then(({ data }) => {
-      users.value = Array.isArray(data) ? data : data?.users ?? []
-    })
-    .catch(err => {
-      error.value = err as Error
-      toast.error('Failed to load users')
-    })
-    .finally(() => {
-      loading.value = false
-    })
-}
+//   loading.value = true
+//   error.value = null
+//   axios.get('/api/users')
+//     .then(({ data }) => {
+//       users.value = Array.isArray(data) ? data : data?.users ?? []
+//     })
+//     .catch(err => {
+//       error.value = err as Error
+//       toast.error('Failed to load users')
+//     })
+//     .finally(() => {
+//       loading.value = false
+//     })
+// }
 
 // onMounted(fetchUsers)
 
@@ -151,78 +164,62 @@ function nextPage() {
   if (page.value * limit.value < totalCount) page.value++
 }
 
-function openEditDialog(user: User) {
+
+function openEditDialog(user: any) {
   currentUser.value = { ...user }
-  selectedroles.value = []
-  fetchRoles().then(() => {
-    if (currentUser.value && Array.isArray(currentUser.value.roles)) {
-      const selected = availableroles.value.filter(r =>
-        currentUser.value.roles.includes(r.name)
+  selectedroles.value = availableroles.value
+    .filter(r => currentUser.value!.roles.includes(r.name))
+    .map(r => r.id)
+  editDialogOpen.value = true
+}
+
+function updateUser() {
+  if (!currentUser.value) return
+  isSubmitting.value = true
+  
+  router.put(`/users/${currentUser.value.id}`, {
+    name: currentUser.value.name,
+    email: currentUser.value.email,
+    roles: selectedroles.value,
+  }, {
+    onSuccess: () => {
+      const updatedUser = {
+        ...currentUser.value,
+        roles: availableroles.value
+          .filter(r => selectedroles.value.includes(r.id))
+          .map(r => r.name)
+      }
+      users.value = users.value.map(u => 
+        u.id === updatedUser.id ? updatedUser : u
       )
-      selectedroles.value = selected.map(r => r.id)
-    } else {
-      selectedroles.value = []
+      toast.success('User updated successfully')
+      editDialogOpen.value = false
+    },
+    onError: (errors) => {
+      toast.error(Object.values(errors).join('\n'))
+    },
+    onFinish: () => {
+      isSubmitting.value = false
     }
-    editDialogOpen.value = true
   })
 }
-
-async function updateUser() {
+function deleteUser() {
   if (!currentUser.value) return
   isSubmitting.value = true
-  try {
-    const selectedRoleNames = availableroles.value
-      .filter(r => selectedroles.value.includes(r.id))
-      .map(r => r.name)
-
-    const payload = {
-      name: currentUser.value.name,
-      email: currentUser.value.email,
-      roles: selectedroles.value, 
+  
+  router.delete(`/users/${currentUser.value.id}`, {
+    onSuccess: () => {
+      users.value = users.value.filter(u => u.id !== currentUser.value!.id)
+      toast.success('User deleted successfully')
+      deleteDialogOpen.value = false
+    },
+    onError: () => {
+      toast.error('Failed to delete user')
+    },
+    onFinish: () => {
+      isSubmitting.value = false
     }
-    await axios.put(`/api/users/${currentUser.value.id}`, payload)
-    const updatedUser = {
-      ...currentUser.value,
-      roles: availableroles.value
-        .filter(r => selectedroles.value.includes(r.id))
-        .map(r => r.name)
-    }
-    users.value = users.value.map(u =>
-      u.id === updatedUser.id ? updatedUser : u
-    )
-    toast.success('User updated successfully')
-    editDialogOpen.value = false
-    fetchUsers()
-  } catch (err) {
-    if (axios.isAxiosError(err)) {
-      const errorMessage = err.response?.data?.message || 'Failed to update user'
-      const errors = err.response?.data?.errors
-      if (errors) {
-        toast.error(
-          Object.values(errors).flat().join('\n')
-        )
-      } else {
-        toast.error(errorMessage)
-      }
-    }
-  } finally {
-    isSubmitting.value = false
-  }
-}
-
-async function deleteUser() {
-  if (!currentUser.value) return
-  isSubmitting.value = true
-  try {
-    await axios.delete(`/api/users/${currentUser.value.id}`)
-    users.value = users.value.filter(u => u.id !== currentUser.value?.id)
-    toast.success('User deleted successfully')
-    deleteDialogOpen.value = false
-  } catch (err) {
-    toast.error('Failed to delete user')
-  } finally {
-    isSubmitting.value = false
-  }
+  })
 }
 
 function openDeleteDialog(user: User) {
@@ -239,16 +236,7 @@ function roleVariant(role: string) {
     default: return 'outline'
   }
 }
-async function fetchRoles() {
-    try {
-        const { data } = await axios.get('/api/roles')
-        availableroles.value = Array.isArray(data)
-            ? data
-            : data?.roles ?? []
-    } catch (err) {
-        toast.error('Failed to load roles')
-    }
-}
+
 function toggleRole(id: number) {
     if (selectedroles.value.includes(id)) {
       selectedroles.value = selectedroles.value.filter(x => x !== id)
@@ -415,10 +403,20 @@ const breadcrumbs: BreadcrumbItem[] = [
               <TableCell>{{ user.name }}</TableCell>
               <TableCell>{{ user.email }}</TableCell>
               <TableCell>
-                <Badge :variant="roleVariant(user.role)" class="text-sm">
-                  {{ user.role }}
+              <div class="flex flex-wrap gap-1">
+                <Badge 
+                  v-for="(role, index) in user.roles" 
+                  :key="index" 
+                  variant="outline" 
+                  class="text-sm"
+                >
+                  {{ role }}
                 </Badge>
-              </TableCell>
+                <span v-if="user.roles.length === 0" class="text-muted-foreground text-sm">
+                  No roles assigned
+                </span>
+              </div>
+            </TableCell>
               <TableCell>{{ formatDate(user.created_at) }}</TableCell>
               <TableCell>{{ formatDate(user.updated_at) }}</TableCell>
               <TableCell class="text-right">

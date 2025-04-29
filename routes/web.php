@@ -12,8 +12,12 @@ Route::get('dashboard', function () {
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 // Route::get('/users'users, '')->name('users.index')->middleware(['auth', 'verified']);
-Route::get('/users', [UserController::class, 'index'])->name('users.index');
-
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/users', [UserController::class, 'index'])->name('users.index');
+    Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
+    Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+    Route::get('/users/create', [UserController::class, 'create'])->name('users.create');
+});
 Route::inertia('/users/create', 'Users/create')->name('users.create')->middleware(['auth', 'verified']);
 Route::inertia('roles', 'Roles/index')->name('roles.index')->middleware(['auth', 'verified']);
 
