@@ -59,4 +59,13 @@ class RolesController extends Controller
         $role->delete();
         return redirect()->back()->with('success', 'Role deleted successfully');
     }
+    public function create()
+    {
+        return Inertia::render('Roles/create', [
+            'permissions' => Permission::all()->map(fn($p) => [
+                'id' => $p->id,
+                'name' => $p->name
+            ])
+        ]);
+    }
 }
