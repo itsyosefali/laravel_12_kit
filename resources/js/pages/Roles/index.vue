@@ -316,7 +316,7 @@ function confirmDelete(role: Role) {
               </TableHead>
               <TableHead class="w-[180px] text-right">Actions</TableHead>
             </TableRow>
-            <Button @click="reloadRoles">Retry</Button>
+            <!-- <Button @click="reloadRoles">Retry</Button> -->
           </TableHeader>
           <TableBody>
             <TableRow v-if="loading">
