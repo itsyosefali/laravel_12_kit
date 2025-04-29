@@ -178,7 +178,6 @@ function deleteRole() {
   const deletedId = currentRole.value.id
   router.delete(`/roles/${deletedId}`, {
     onSuccess: () => {
-      // Remove the deleted role from the local roles list
       roles.value = roles.value.filter(r => r.id !== deletedId)
       deleteDialogOpen.value = false
       isSubmitting.value = false
@@ -294,7 +293,17 @@ function confirmDelete(role: Role) {
           Add Role
         </Button>
       </div>
-
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 my-4">
+  <div
+    v-for="role in filteredRoles"
+    :key="role.id"
+    class="rounded-lg border p-4 flex flex-col items-center bg-muted/30"
+  >
+    <div class="text-lg font-semibold mb-2">{{ role.name }}</div>
+    <div class="text-4xl font-bold text-primary mb-1">{{ role.permissions.length }}</div>
+    <div class="text-xs text-muted-foreground">Permissions</div>
+  </div>
+</div>
       <div class="rounded-md border overflow-auto">
         <Table class="min-w-[700px]">
           <TableHeader class="bg-muted/50">
