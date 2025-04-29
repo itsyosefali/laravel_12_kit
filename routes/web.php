@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+use App\Http\Controllers\RolesController;
 use App\Http\Controllers\UserController;
 Route::get('/', function () {
     return Inertia::render('Welcome');
@@ -18,10 +19,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
     Route::get('/users/create', [UserController::class, 'create'])->name('users.create');
 });
-Route::inertia('/users/create', 'Users/create')->name('users.create')->middleware(['auth', 'verified']);
-Route::inertia('roles', 'Roles/index')->name('roles.index')->middleware(['auth', 'verified']);
 
-Route::inertia('roles/create', 'Roles/create')->name('roles.create')->middleware(['auth', 'verified']);
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/roles', [RolesController::class, 'index'])->name('roles.index');
+    Route::get('/roles/create', [RolesController::class, 'create'])->name('roles.create');
+    Route::post('/roles', [RolesController::class, 'store'])->name('roles.store');
+    Route::put('/roles/{role}', [RolesController::class, 'update'])->name('roles.update');
+    Route::delete('/roles/{role}', [RolesController::class, 'destroy'])->name('roles.destroy');
+});
 
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';
