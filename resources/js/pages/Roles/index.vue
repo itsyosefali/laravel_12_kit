@@ -188,7 +188,8 @@ function deleteRole() {
       toast.error('Failed to delete role')
     }
   })
-}
+}    // Delay the redirect by 2000ms to allow the toast to be visible
+
 
 function togglePermission(id: number) {
   if (selectedPermissions.value.includes(id)) {

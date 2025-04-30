@@ -15,10 +15,10 @@ Route::get('dashboard', function () {
 // Route::get('/users'users, '')->name('users.index')->middleware(['auth', 'verified']);
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/users', [UserController::class, 'index'])->name('users.index');
+    Route::get('/users/create', [UserController::class, 'create'])->name('users.create');
     Route::post('/users', [UserController::class, 'store'])->name('users.store');
     Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
     Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
-    Route::get('/users/create', [UserController::class, 'create'])->name('users.create');
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {

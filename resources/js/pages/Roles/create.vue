@@ -1,61 +1,48 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import axios from 'axios'
-import { Button } from '@/components/ui/button'
-import AppLayout from '@/layouts/AppLayout.vue'
-import { router } from '@inertiajs/vue3'
+import { ref } from 'vue'
+import { router, usePage } from '@inertiajs/vue3'
 import { toast, Toaster } from 'vue-sonner'
+import AppLayout from '@/layouts/AppLayout.vue'
+import { Button } from '@/components/ui/button'
 
-interface Permission {
-  id: number
-  name: string
-}
+const props = defineProps<{
+  permissions: Array<{ id: number; name: string }>
+}>()
 
 const roleName = ref('')
-const permissions = ref<Permission[]>([])
 const selectedPermissions = ref<number[]>([])
 const loading = ref(false)
 const breadcrumbs = [
   { title: 'Create Role', href: '/roles/create' }
 ]
 
-onMounted(async () => {
-  loading.value = true
-  try {
-    const { data } = await axios.get('/api/roles/permissions')
-    permissions.value = Array.isArray(data) ? data : data?.permissions || []
-    if (!permissions.value.length) {
-      toast.error('No permissions found')
-    }
-  } catch (error) {
-    toast.error('Failed to load permissions')
-    console.error(error)
-  } finally {
-    loading.value = false
-  }
-})
+const permissions = ref(props.permissions)
 
 async function createRole() {
-  try {
-    await axios.post('/api/roles/', {
-      name: roleName.value,
-      permissions: selectedPermissions.value,
-    })
-    toast.success('Role created successfully!')
-    // Delay the redirect by 2000ms to allow the toast to be visible
-    setTimeout(() => {
-      router.visit('/roles')
-    }, 1000)
-  } catch (e: any) {
-    toast.error(e?.response?.data?.message || 'Failed to create role')
-  }
+  loading.value = true
+  router.post('/roles', {
+    name: roleName.value,
+    permissions: selectedPermissions.value,
+  }, {
+    onSuccess: () => {
+      toast.success('Role created successfully!')
+      setTimeout(() => {
+        router.visit('/roles')
+      }, 1000)
+    },
+    onError: (errors) => {
+      toast.error(errors.name || 'Failed to create role')
+    },
+    onFinish: () => {
+      loading.value = false
+    }
+  })
 }
 </script>
 
 <template>
   <AppLayout :breadcrumbs="breadcrumbs">
-    <!-- Render notifications -->
-    <Toaster rich-colors position="top-center" />
+    <Toaster position="top-center" />
     <div class="max-w-lg mx-auto mt-10 space-y-6">
       <h1 class="text-2xl font-bold mb-4">Create Role</h1>
       <form @submit.prevent="createRole" class="space-y-4">
