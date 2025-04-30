@@ -11,9 +11,10 @@ class UserController extends Controller
 {
     public function index()
     {
+        $authUser = auth()->user()->load('roles');
         return Inertia::render('Users/index', [
             'users' => User::with(['roles' => function ($query) {
-                $query->select('name'); 
+                $query->select('name');
             }])->get()->map(function ($user) {
                 return [
                     'id' => $user->id,
@@ -24,10 +25,16 @@ class UserController extends Controller
                     'updated_at' => $user->updated_at->toDateTimeString(),
                 ];
             }),
-            'roles' => Role::all(['id', 'name'])
+            'roles' => Role::all(['id', 'name']),
+            'authUser' => [
+                'id' => $authUser->id,
+                'name' => $authUser->name,
+                'email' => $authUser->email,
+                'roles' => $authUser->roles->pluck('name')->toArray(),
+            ]
         ]);
     }
-
+    
     public function store(Request $request)
     {
         $validated = $request->validate([

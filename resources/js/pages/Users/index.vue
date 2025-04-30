@@ -94,7 +94,18 @@ const filteredUsers = computed(() => {
   const start = (page.value - 1) * limit.value
   return list.slice(start, start + limit.value)
 })
-
+interface AuthUser {
+  user: any
+  id: number
+  name: string
+  email: string
+  roles: string[]
+}
+const authUser = usePage().props.auth as AuthUser
+const userRoles = Array.isArray(authUser.user.roles)
+  ? authUser.user.roles.map((r: any) => r.name)
+  : []
+const isAdmin = userRoles.includes('Admin')
 function countByRole(name: string) {
   return users.value.filter(u => u.roles.includes(name)).length
 }
@@ -216,19 +227,16 @@ const breadcrumbs: BreadcrumbItem[] = [ { title: 'Users Management', href: '/use
       </DialogContent>
     </Dialog>
 
-    <!-- Filters & Add -->
-    <div class="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center mb-4">
+    <div v-if="isAdmin" class="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center mb-4">
       <Input v-model="searchQuery" placeholder="Search users..." @update:model-value="handleSearch" class="max-w-[400px]" />
-      <Button @click="openAddDialog"><PlusIcon class="h-4 w-4 mr-2" />Add User</Button>
+      <Button @click="openAddDialog" ><PlusIcon class="h-4 w-4 mr-2" />Add User</Button>
     </div>
 
-    <!-- Summary Cards -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
       <Card><CardContent><div class="text-sm text-muted-foreground">Total Users</div><div class="text-2xl font-bold">{{ users.length }}</div></CardContent></Card>
       <Card v-for="r in availableroles" :key="r.id"><CardContent><div class="text-sm text-muted-foreground">{{ r.name }}</div><div class="text-2xl font-bold">{{ countByRole(r.name) }}</div></CardContent></Card>
     </div>
 
-    <!-- Users Table -->
     <div class="rounded-md border overflow-auto">
       <Table class="min-w-[800px]">
         <TableHeader class="bg-muted/50">
