@@ -68,22 +68,24 @@ const props = defineProps<{
 const roles = ref<Role[]>(props.roles)
 const availablePermissions = ref<Permission[]>(props.permissions)
 
-const filteredRoles = computed(() => {
-  return roles.value.filter(role =>
+const displayedRoles = computed(() => {
+  let data = [...roles.value]
+
+  data = data.filter(role =>
     role.name.toLowerCase().includes(searchQuery.value.toLowerCase())
   )
-})
 
-const sortedRoles = computed(() => {
-  let result = [...roles.value]
-  result.sort((a, b) => {
+  data.sort((a, b) => {
     const valA = (a as any)[sortByField.value]
     const valB = (b as any)[sortByField.value]
     if (valA < valB) return sortOrder.value === 'asc' ? -1 : 1
     if (valA > valB) return sortOrder.value === 'asc' ? 1 : -1
     return 0
   })
-  return result
+
+  const startIndex = (page.value - 1) * limit.value
+  const endIndex = startIndex + limit.value
+  return data.slice(startIndex, endIndex)
 })
 
 function reloadRoles() {
@@ -188,8 +190,7 @@ function deleteRole() {
       toast.error('Failed to delete role')
     }
   })
-}    // Delay the redirect by 2000ms to allow the toast to be visible
-
+}
 
 function togglePermission(id: number) {
   if (selectedPermissions.value.includes(id)) {
@@ -208,79 +209,79 @@ function confirmDelete(role: Role) {
 <template>
   <AppLayout :breadcrumbs="breadcrumbs">
     <Toaster position="top-center" />
-<Dialog v-model:open="editDialogOpen">
-  <DialogContent>
-    <DialogHeader>
-      <DialogTitle>Edit Role</DialogTitle>
-      <DialogDescription>
-        Modify role details below. Click save when you're done.
-      </DialogDescription>
-    </DialogHeader>
-    
-    <div class="space-y-4" v-if="currentRole">
-      <div class="space-y-2">
-        <Label>Role Name</Label>
-        <Input v-model="currentRole.name" />
-      </div>
-      
-      <div class="space-y-2">
-        <Label>Permissions</Label>
-        <div class="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto p-2 border rounded">
-        <div
-          v-for="perm in availablePermissions"
-          :key="perm.id"
-          class="flex items-center gap-2"
-        >
-          <Checkbox 
-            :id="`perm-${perm.id}`"
-            :value="perm.id"
-            @click="togglePermission(perm.id)"
-            :checked="selectedPermissions.includes(perm.id)"
-          />
-          <Label :for="`perm-${perm.id}`" class="text-sm font-normal">
-            {{ perm.name }}
-          </Label>
+    <Dialog v-model:open="editDialogOpen">
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Edit Role</DialogTitle>
+          <DialogDescription>
+            Modify role details below. Click save when you're done.
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div class="space-y-4" v-if="currentRole">
+          <div class="space-y-2">
+            <Label>Role Name</Label>
+            <Input v-model="currentRole.name" />
+          </div>
+          
+          <div class="space-y-2">
+            <Label>Permissions</Label>
+            <div class="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto p-2 border rounded">
+            <div
+              v-for="perm in availablePermissions"
+              :key="perm.id"
+              class="flex items-center gap-2"
+            >
+              <Checkbox 
+                :id="`perm-${perm.id}`"
+                :value="perm.id"
+                @click="togglePermission(perm.id)"
+                :checked="selectedPermissions.includes(perm.id)"
+              />
+              <Label :for="`perm-${perm.id}`" class="text-sm font-normal">
+                {{ perm.name }}
+              </Label>
+            </div>
+          </div>
+          </div>
         </div>
-      </div>
-      </div>
-    </div>
 
-    <DialogFooter>
-      <Button variant="outline" @click="editDialogOpen = false">Cancel</Button>
-      <Button @click="updateRole" :disabled="isSubmitting">
-        <LoaderCircle v-if="isSubmitting" class="h-4 w-4 mr-2 animate-spin" />
-        Save Changes
-      </Button>
-    </DialogFooter>
-  </DialogContent>
-</Dialog>
+        <DialogFooter>
+          <Button variant="outline" @click="editDialogOpen = false">Cancel</Button>
+          <Button @click="updateRole" :disabled="isSubmitting">
+            <LoaderCircle v-if="isSubmitting" class="h-4 w-4 mr-2 animate-spin" />
+            Save Changes
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
 
-<Dialog v-model:open="deleteDialogOpen">
-  <DialogContent>
-    <DialogHeader>
-      <DialogTitle>Confirm Delete</DialogTitle>
-      <DialogDescription>
-        Are you sure you want to delete this role? This action cannot be undone.
-      </DialogDescription>
-    </DialogHeader>
-    
-    <div class="flex flex-col gap-4" v-if="currentRole">
-      <div class="bg-destructive/10 p-4 rounded">
-        <p class="text-destructive font-medium">
-          Deleting role: {{ currentRole.name }}
-        </p>
-      </div>
-    </div>
+    <Dialog v-model:open="deleteDialogOpen">
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Confirm Delete</DialogTitle>
+          <DialogDescription>
+            Are you sure you want to delete this role? This action cannot be undone.
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div class="flex flex-col gap-4" v-if="currentRole">
+          <div class="bg-destructive/10 p-4 rounded">
+            <p class="text-destructive font-medium">
+              Deleting role: {{ currentRole.name }}
+            </p>
+          </div>
+        </div>
 
-    <DialogFooter>
-      <Button variant="outline" @click="deleteDialogOpen = false">Cancel</Button>
-      <Button variant="destructive" @click="deleteRole" :disabled="isSubmitting">
-        <LoaderCircle v-if="isSubmitting" class="h-4 w-4 mr-2 animate-spin" />
-        Confirm Delete
-      </Button>
-    </DialogFooter>
-  </DialogContent>
-</Dialog>
+        <DialogFooter>
+          <Button variant="outline" @click="deleteDialogOpen = false">Cancel</Button>
+          <Button variant="destructive" @click="deleteRole" :disabled="isSubmitting">
+            <LoaderCircle v-if="isSubmitting" class="h-4 w-4 mr-2 animate-spin" />
+            Confirm Delete
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
     <div class="space-y-4">
       <div class="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
         <input
@@ -294,17 +295,19 @@ function confirmDelete(role: Role) {
           Add Role
         </Button>
       </div>
+
       <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 my-4">
-  <div
-    v-for="role in filteredRoles"
-    :key="role.id"
-    class="rounded-lg border p-4 flex flex-col items-center bg-muted/30"
-  >
-    <div class="text-lg font-semibold mb-2">{{ role.name }}</div>
-    <div class="text-4xl font-bold text-primary mb-1">{{ role.permissions.length }}</div>
-    <div class="text-xs text-muted-foreground">Permissions</div>
-  </div>
-</div>
+        <div
+          v-for="role in roles"
+          :key="role.id"
+          class="rounded-lg border p-4 flex flex-col items-center bg-muted/30"
+        >
+          <div class="text-lg font-semibold mb-2">{{ role.name }}</div>
+          <div class="text-4xl font-bold text-primary mb-1">{{ role.permissions.length }}</div>
+          <div class="text-xs text-muted-foreground">Permissions</div>
+        </div>
+      </div>
+
       <div class="rounded-md border overflow-auto">
         <Table class="min-w-[700px]">
           <TableHeader class="bg-muted/50">
@@ -317,80 +320,41 @@ function confirmDelete(role: Role) {
                 Role Name
                 <ArrowUpDownIcon class="h-4 w-4 ml-1 inline-block" />
               </TableHead>
-              <TableHead>
-                Permissions
-              </TableHead>
+              <TableHead>Permissions</TableHead>
               <TableHead class="cursor-pointer" @click="sortBy('created_at')">
                 Created
                 <ArrowUpDownIcon class="h-4 w-4 ml-1 inline-block" />
               </TableHead>
               <TableHead class="w-[180px] text-right">Actions</TableHead>
             </TableRow>
-            <!-- <Button @click="reloadRoles">Retry</Button> -->
           </TableHeader>
           <TableBody>
-            <TableRow v-if="loading">
-              <TableCell colspan="5" class="text-center py-12">
-                <div class="flex items-center justify-center gap-2">
-                  <LoaderCircle class="h-6 w-6 animate-spin" />
-                  <span class="text-lg">Loading roles...</span>
-                </div>
-              </TableCell>
-            </TableRow>
-            <TableRow v-else-if="error">
-              <TableCell colspan="5" class="text-center py-12 text-destructive">
-                <div class="flex flex-col items-center gap-4">
-                  <AlertCircleIcon class="h-12 w-12" />
-                  <div class="text-lg font-medium">
-                    Error loading roles: {{ error.message }}
-                  </div>
-                  <Button @click="reloadRoles">Retry</Button>
-                </div>
-              </TableCell>
-            </TableRow>
-            <TableRow v-else-if="!sortedRoles.length">
-              <TableCell colspan="5" class="text-center py-12">
-                <div class="flex flex-col items-center gap-4">
-                  <ShieldIcon class="h-24 w-24 text-muted-foreground" />
-                  <div class="text-xl font-medium">No roles found</div>
-                  <Button @click="openAddDialog">Add New Role</Button>
-                </div>
-              </TableCell>
-            </TableRow>
             <TableRow
-              v-for="role in filteredRoles"
+              v-for="role in displayedRoles"
               :key="role.id"
               class="hover:bg-muted/50"
             >
               <TableCell class="font-medium">{{ role.id }}</TableCell>
               <TableCell>{{ role.name }}</TableCell>
-            <TableCell>
-              <div class="flex flex-wrap gap-1">
-                <span
-                  v-for="(permName, index) in role.permissions"
-                  :key="index"
-                  class="inline-block bg-muted px-2 py-1 rounded text-xs"
-                >
-                  {{ permName }} 
-                </span>
-              </div>
-            </TableCell>
+              <TableCell>
+                <div class="flex flex-wrap gap-1">
+                  <span
+                    v-for="(permName, index) in role.permissions"
+                    :key="index"
+                    class="inline-block bg-muted px-2 py-1 rounded text-xs"
+                  >
+                    {{ permName }}
+                  </span>
+                </div>
+              </TableCell>
               <TableCell>{{ role.created_at.slice(0, 10) }}</TableCell>
               <TableCell class="text-right">
                 <div class="flex justify-end gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    @click="openEditDialog(role)"
-                  >
+                  <Button variant="outline" size="sm" @click="openEditDialog(role)">
                     <PencilIcon class="h-4 w-4 mr-1" />
                     Edit
                   </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    @click="confirmDelete(role)"
-                  >
+                  <Button variant="destructive" size="sm" @click="confirmDelete(role)">
                     <TrashIcon class="h-4 w-4 mr-1" />
                     Delete
                   </Button>
@@ -403,7 +367,7 @@ function confirmDelete(role: Role) {
 
       <div class="flex flex-col sm:flex-row gap-4 items-center justify-between px-2">
         <div class="text-sm text-muted-foreground">
-          Showing {{ filteredRoles.length }} of {{ roles.length }} roles
+          Showing {{ displayedRoles.length }} of {{ roles.length }} roles
         </div>
         <div class="flex items-center gap-2">
           <Button
