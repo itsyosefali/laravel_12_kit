@@ -15,7 +15,10 @@ class RolesController extends Controller
                 return [
                     'id' => $role->id,
                     'name' => $role->name,
-                    'permissions' => $role->permissions->pluck('name'), 
+                    'permissions' => $role->permissions->map(fn($perm): array => [
+                        'id' => $perm->id,
+                        'name' => $perm->name,
+                    ]),
                     'created_at' => $role->created_at->toDateTimeString(),
                 ];
             }),
@@ -51,7 +54,7 @@ class RolesController extends Controller
         $role->update(['name' => $validated['name']]);
         $role->syncPermissions($validated['permissions']);
 
-        return redirect()->back()->with('success', 'Role updated successfully');
+        return to_route('roles.index');
     }
 
     public function destroy(Role $role)
